@@ -355,7 +355,7 @@ int main(int argc, char* argv[])
 	// Upload file to FTP-server
 	if( ftpServer.size() > 0 )
 		try {
-			int ncftp_argc = 9;
+			int ncftp_argc = 11;
 			if (ftpPort.empty())
 				ftpPort = "21";	// use default ftp port
 			const char* pszArguments[] = { "ncftpput", "-u", ftpUsername.c_str(), "-p", ftpPassword.c_str(), "-P", ftpPort.c_str(), 
