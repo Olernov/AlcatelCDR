@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
 	string line;
 	string option_name;
 	string option_value;
-	size_t pos, delim_pos, comment_pos;
+	
 	ifstream ifsSettings ("AlcatelCDR.ini", ifstream::in);
 	if (!ifsSettings.is_open())	{
 		log("Unable to open ini-file AlcatelCDR.ini");
@@ -298,7 +298,7 @@ int main(int argc, char* argv[])
 			otlUpdate.close();
 			
 			record_count++;
-			if( fileSize >= maxAllowedFileSize) 
+			if( fileSize >= (unsigned long) maxAllowedFileSize) 
 				break;
 		}
 		catch (otl_exception &otlEx) {

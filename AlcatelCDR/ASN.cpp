@@ -156,13 +156,13 @@ int ASNType::decodeTag(const unsigned char* buffer,int bufferLen)
 int ASNType::decodeLen(const unsigned char* buffer,unsigned long* dataLen)
 {
 	*dataLen=0;
-	int i=1;
+	unsigned int i=1;
 
 	if(!(buffer[0] & 0x80) )
 		*dataLen = buffer[0];
 	else {
 		// Длина данных закодирована несколькими октетами, подробнее см. encodeLen
-		int nOctets = buffer[0] & 0x7F;
+		unsigned int nOctets = buffer[0] & 0x7F;
 		if(nOctets > sizeof(*dataLen))
 			throw ASN_decode_fail();
 		for(; i<nOctets+1; i++) {
@@ -418,12 +418,12 @@ ASNTBCDString::ASNTBCDString(_TagClass _tagClass, int _tagID, string _value, int
 		for (unsigned int i = 0; i < _value.length(); i += 2) {
 			if(i < _value.length() - 1) 
 				if( switchDigits )	
-					data.push_back( _value[i]-'0' | ((_value[i+1]-'0')<<4) );
+					data.push_back( (_value[i]-'0') | ((_value[i+1]-'0')<<4) );
 				else
-					data.push_back( _value[i+1]-'0' | ((_value[i]-'0')<<4) );
+					data.push_back( (_value[i+1]-'0') | ((_value[i]-'0')<<4) );
 			else
 				if( switchDigits )	
-					data.push_back( _value[i]-'0' | 0xF0 );
+					data.push_back( (_value[i]-'0') | 0xF0 );
 				else
 					data.push_back( (_value[i]-'0')<<4 | 0x0F );	// add filler 'F'
 		}
