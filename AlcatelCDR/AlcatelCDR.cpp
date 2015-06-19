@@ -55,15 +55,15 @@ int assign_integer_option(string _name, string _value, long& param, long minVali
 		param = stoi(_value, &stoi_idx);
 	}
 	catch(...) {
-		cerr << "Wrong value for " << _name << " given in ini-file.";
+		log("Wrong value for " + _name + " given in ini-file.");
 		return -1;
 	}
 	if(stoi_idx < _value.length()) {
-		cerr << "Wrong value for " << _name << " given in ini-file.";
+		log("Wrong value for " + _name + " given in ini-file.");
 		return -1;
 	}
 	if(param<minValid || param>maxValid) {
-		cerr << "Wrong value for " << _name << " given in ini-file. Valid range is from " << minValid << " to " << maxValid;
+		log("Wrong value for " + _name + " given in ini-file. Valid range is from " + to_string((long long)minValid) + " to " + to_string((long long) maxValid));
 		return -1;
 	}
 	
@@ -80,7 +80,10 @@ int main(int argc, char* argv[])
 	string ftpServer;
 	string ftpUsername;
 	string ftpPassword;
+	string ftpPort;
 	string ftpDirectory;
+
+	ofsLog.open("AlcatelCDR.log", ofstream::app);
 
 	// Reading initial settings from file
 	string line;
@@ -89,9 +92,10 @@ int main(int argc, char* argv[])
 	size_t pos, delim_pos, comment_pos;
 	ifstream ifsSettings ("AlcatelCDR.ini", ifstream::in);
 	if (!ifsSettings.is_open())	{
-		cerr << "Unable to open ini-file AlcatelCDR.ini";
+		log("Unable to open ini-file AlcatelCDR.ini");
 		exit(1);
 	}
+
 	while ( getline (ifsSettings, line) )
 	{
 		size_t pos = line.find_first_not_of(" \t\r\n");
@@ -115,7 +119,7 @@ int main(int argc, char* argv[])
 				if ( assign_integer_option(option_name, option_value, maxAllowedFileSize, 1000, 1000000000) != 0 )
 					exit(1);
 			if( option_name.compare( "PAST_LOOKUP_INTERVAL" ) == 0 ) {
-				if ( assign_integer_option(option_name, option_value, pastLookupInterval, 1, 360) != 0 )
+				if ( assign_integer_option(option_name, option_value, pastLookupInterval, 1, 365) != 0 )
 					exit(1);
 			}
 			if( option_name.compare( "FTP_SERVER" ) == 0  )
@@ -124,13 +128,15 @@ int main(int argc, char* argv[])
 				ftpUsername = option_value;
 			if( option_name.compare( "FTP_PASSWORD" ) == 0  )
 				ftpPassword = option_value;
+			if (option_name.compare("FTP_PORT") == 0)
+				ftpPort = option_value;
 			if( option_name.compare( "FTP_DIRECTORY" ) == 0  )
 				ftpDirectory = option_value;
 		}
 	}
 	ifsSettings.close();
 
-	ofsLog.open("AlcatelCDR.log", ofstream::app);
+	
 
 	if(connectString.length() == 0) {
 		log("Connect string to DB is not found in ini-file. Exiting.");
@@ -139,7 +145,7 @@ int main(int argc, char* argv[])
 
 	log("---- Alcatel TAP writing service started ----");
 	log("Init params: CONNECT_STRING: " + connectString + ", MAX_TAP_FILE_SIZE: " + to_string( static_cast<unsigned long long> (maxAllowedFileSize)) + ", PAST_LOOKUP_INTERVAL: " + to_string( static_cast<unsigned long long> (pastLookupInterval)) +
-		", FTP_SERVER: " + ftpServer + ", FTP_USERNAME: " + ftpUsername + ", FTP_PASSWORD: " + ftpPassword + ", FTP_DIRECTORY: " + ftpDirectory);
+		", FTP_SERVER: " + ftpServer + ", FTP_USERNAME: " + ftpUsername + ", FTP_PASSWORD: " + ftpPassword + ", FTP_PORT: " + ftpPort + ", FTP_DIRECTORY: " + ftpDirectory);
 	
 	otl_connect otlConnect;
 
@@ -343,14 +349,17 @@ int main(int argc, char* argv[])
 	}
 
 	otlStream.close();
-	otlConnect.commit();
+	//otlConnect.commit();
 	fclose(f);
 	
 	// Upload file to FTP-server
 	if( ftpServer.size() > 0 )
 		try {
 			int ncftp_argc = 9;
-			const char* pszArguments[] = { "ncftpput", "-u", ftpUsername.c_str(), "-p", ftpPassword.c_str(),  ftpServer.c_str(), ftpDirectory.c_str(), fullFileName.c_str(), NULL};
+			if (ftpPort.empty())
+				ftpPort = "21";	// use default ftp port
+			const char* pszArguments[] = { "ncftpput", "-u", ftpUsername.c_str(), "-p", ftpPassword.c_str(), "-P", ftpPort.c_str(), 
+											ftpServer.c_str(), ftpDirectory.c_str(), fullFileName.c_str(), NULL };
 			char szFtpResult[4096];
 			int ftpResult = ncftp_main(ncftp_argc, (char**)pszArguments, szFtpResult);
 			if( ftpResult != 0 ) {
@@ -359,6 +368,7 @@ int main(int argc, char* argv[])
 				logToDB(2, "---- Alcatel TAP writing service finished with errors ----");
 				otlLogConnect.commit();
 				otlLogConnect.logoff();
+				otlConnect.rollback();
 				otlConnect.logoff();
 				log("---- Alcatel TAP writing service finished with errors, see DB log----");
 				if(ofsLog.is_open()) ofsLog.close();
@@ -408,6 +418,7 @@ int main(int argc, char* argv[])
 			logToDB(2, "---- Alcatel TAP writing service finished with errors ----");
 			otlLogConnect.commit();
 			otlLogConnect.logoff();
+			otlConnect.rollback();
 			otlConnect.logoff();
 			log("---- Alcatel TAP writing service finished with errors, see DB log ----");
 			if(ofsLog.is_open()) ofsLog.close();

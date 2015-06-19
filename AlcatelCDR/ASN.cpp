@@ -87,7 +87,7 @@ int ASNType::encodeLength(unsigned long lenToEncode,unsigned char* buffer)
 	unsigned char tempLen=0;
 
 	if( lenToEncode <= 128 )
-		buffer[len++] = lenToEncode;
+		buffer[len++] = (unsigned char) lenToEncode;
 	else {
 		tempLen=0;
 		int lenLeft=lenToEncode;
@@ -137,7 +137,7 @@ int ASNType::decodeTag(const unsigned char* buffer,int bufferLen)
 {
 	int i=1;
 	tagClass = static_cast<_TagClass>((buffer[0] & 0xC0) >> 6);
-	constructed = buffer[0] & 0x20;
+	constructed = (buffer[0] & 0x20) > 0;
 	if((buffer[0] & 0x1F) < 0x1F)
 		tagID = buffer[0] & 0x1F;
 	else {
@@ -298,7 +298,7 @@ ASNInteger::ASNInteger(ASNType& pObject)
 	initialize(tcUniversal, TAG_INTEGER, false, pObject.getData());
 
 	value=0;
-	for(int i=0; i<data.size(); i++) {
+	for(unsigned int i=0; i<data.size(); i++) {
 		value <<= 8;
 		value |= data[i];
 	}
@@ -415,7 +415,7 @@ ASNTBCDString::ASNTBCDString(_TagClass _tagClass, int _tagID, string _value, int
 			if(addressString) 
 				data.push_back( 0x81 ); // unknown type of number, numbering plan=E.164
 
-		for(int i=0; i < _value.length(); i+=2) {
+		for (unsigned int i = 0; i < _value.length(); i += 2) {
 			if(i < _value.length() - 1) 
 				if( switchDigits )	
 					data.push_back( _value[i]-'0' | ((_value[i+1]-'0')<<4) );
@@ -429,7 +429,7 @@ ASNTBCDString::ASNTBCDString(_TagClass _tagClass, int _tagID, string _value, int
 		}
 	}
 
-	while( data.size() < minimal_size )  data.push_back(0xFF);		// fill to requested size with F fillers
+	while( data.size() < (unsigned int) minimal_size )  data.push_back(0xFF);		// fill to requested size with F fillers
 	
 }
 
